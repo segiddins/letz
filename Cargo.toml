@@ -1,0 +1,12 @@
+[package]
+name = "letz"
+version = "0.1.0"
+edition = "2024"
+
+[[example]]
+name = "negative_perkeo"
+
+[dependencies]
+rand = "0.9.1"
+strum = { version = "0.27.1", features = ["derive"] }
+strum_macros = "0.27.1"
