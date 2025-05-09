@@ -54,10 +54,6 @@ impl LuaRandom {
 
 #[test]
 fn test_basic() {
-    // for (seed, max, expected) in [(0.0, 2, 2), (0.0, 3, 2), (10.0, 10, 6)] {
-    //     let mut lr = LuaRandom::seed(seed);
-    //     assert_eq!(lr.range(1, max), expected, "seed: {seed}, max: {max}");
-    // }
     for (seed, expected) in [(0.0, 0.794206292431241), (3.0, 0.5044953415063862)] {
         let mut lr = LuaRandom::seed(seed);
         assert_eq!(lr.random(), expected, "seed: {seed}");

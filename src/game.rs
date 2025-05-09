@@ -1,6 +1,10 @@
-use std::{collections::HashMap, f64, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet},
+    f64,
+    hash::Hash,
+};
 
-use strum::{EnumIter, VariantArray};
+use strum::{AsRefStr, EnumIter, VariantArray};
 
 use crate::lua_random::LuaRandom;
 
@@ -218,6 +222,13 @@ impl Rng {
         }
     }
 
+    pub fn reseed<S: Into<String>>(&mut self, seed: S) {
+        let seed = seed.into();
+        self.seed = seed;
+        self.hashed_seed = pseudohash(&self.seed);
+        self.states.clear();
+    }
+
     fn roll<S: AsRef<str>>(&mut self, key: S) -> LuaRandom {
         let state = self
             .states
@@ -232,21 +243,115 @@ impl Rng {
     }
 }
 
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq)]
+pub enum Item {
+    LegendaryJoker(LegendaryJoker),
+    Voucher(Voucher),
+    Tag(Tag),
+    Boss(Boss),
+}
+
+impl Into<Item> for LegendaryJoker {
+    fn into(self) -> Item {
+        Item::LegendaryJoker(self)
+    }
+}
+
+impl Into<Item> for Voucher {
+    fn into(self) -> Item {
+        Item::Voucher(self)
+    }
+}
+
+impl Into<Item> for Tag {
+    fn into(self) -> Item {
+        Item::Tag(self)
+    }
+}
+
+impl Into<Item> for Boss {
+    fn into(self) -> Item {
+        Item::Boss(self)
+    }
+}
+
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, AsRefStr)]
+pub enum Boss {
+    SmallBoss(SmallBoss),
+    BigBoss(BigBoss),
+}
+
+impl Into<Boss> for SmallBoss {
+    fn into(self) -> Boss {
+        Boss::SmallBoss(self)
+    }
+}
+impl Into<Boss> for BigBoss {
+    fn into(self) -> Boss {
+        Boss::BigBoss(self)
+    }
+}
+
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, AsRefStr)]
+pub enum SmallBoss {
+    Serpent,
+}
+
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, AsRefStr)]
+pub enum BigBoss {
+    VioletVessel,
+}
+
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, AsRefStr)]
+pub enum Voucher {
+    Blank,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct Ante {
+    number: i8,
+    skip_tags: [Tag; 2],
+    boss: Boss,
+    voucher: Voucher,
+}
+
 #[derive(Debug, Clone)]
 pub struct Game {
     rng: Rng,
+    ante: Ante,
+    locked_items: HashSet<Item>,
 }
 
 impl Game {
     pub fn new<S: AsRef<str>>(seed: S) -> Self {
         let rng = Rng::new(seed.as_ref().to_string());
-        Game { rng }
+        let game = Game {
+            rng,
+            ante: Ante {
+                number: 0,
+                skip_tags: [Tag::Uncommon_Tag, Tag::Rare_Tag],
+                boss: Boss::SmallBoss(SmallBoss::Serpent),
+                voucher: Voucher::Blank,
+            },
+            locked_items: HashSet::new(),
+        };
+        game
     }
 
-    pub fn random_choice<E: VariantArray + Copy>(&mut self, id: &str) -> E {
+    pub fn reset<S: Into<String>>(&mut self, seed: S) {
+        self.rng.reseed(seed);
+        self.locked_items.clear();
+        self.ante.number = 1;
+    }
+
+    pub fn random_choice<E: VariantArray + Copy + Into<Item>>(&mut self, id: &str) -> E {
         let choices = E::VARIANTS;
         let idx = self.rng.roll(id).range(0, choices.len() as u64 - 1);
-        choices[idx as usize]
+        let choice = choices[idx as usize];
+        if self.locked_items.contains(&choice.into()) {
+            todo!("Handle locked items");
+        }
+        choice
     }
 
     pub fn random(&mut self, id: &str) -> f64 {
