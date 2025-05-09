@@ -1,6 +1,9 @@
-use std::{iter::Map, ops::Range};
+use std::{
+    iter::{Map, repeat_with},
+    ops::Range,
+};
 
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 
 const ALPHABET: [u8; 36] = [
     b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F',
@@ -21,7 +24,7 @@ fn idx_to_seed(mut i: usize) -> String {
     for _ in 0..SEED_LENGTH {
         let rem: usize;
         (i, rem) = (i / 36, i % 36);
-        seed.push(ALPHABET[rem as usize] as char);
+        seed.push(ALPHABET[rem] as char);
     }
 
     seed
@@ -137,10 +140,14 @@ pub fn par_seeds() -> rayon::iter::Map<rayon::range::Iter<usize>, fn(usize) -> S
         .map(idx_to_seed)
 }
 
+pub fn par_random_seeds() -> impl rayon::iter::ParallelIterator<Item = String> {
+    repeat_with(|| rand::random_range(0..usize::pow(36, SEED_LENGTH as u32)))
+        .par_bridge()
+        .map(idx_to_seed)
+}
+
 #[cfg(test)]
 mod tests {
-    use rayon::iter::IntoParallelIterator;
-
     use super::*;
 
     #[test]
@@ -161,5 +168,27 @@ mod tests {
 
         assert_eq!(seeds().len(), 36u64.pow(SEED_LENGTH as u32) as usize);
         assert_eq!(seeds().next_back(), Some("ZZZZZZZZ".to_string()));
+    }
+
+    #[test]
+    fn test_high_offset() {
+        let seeds = seeds().skip(36 * 36 * 36 + 1).take(10);
+
+        let expected = vec![
+            "ZZZZZZZZ", "ZZZZZZZY", "ZZZZZZZX", "ZZZZZZZW", "ZZZZZZZV", "ZZZZZZZU", "ZZZZZZZT",
+            "ZZZZZZZS", "ZZZZZZZR", "ZZZZZZZQ",
+        ];
+        assert_eq!(seeds.collect::<Vec<_>>(), expected);
+    }
+
+    #[test]
+    fn range() {
+        let max = 10_000_000_000;
+        let r: Range<usize> = 0..max;
+
+        assert_eq!(Some(max - 1), r.clone().into_iter().nth(max - 1));
+
+        let map = r.into_iter().map(|i| i.to_string());
+        assert_eq!(Some((max - 1).to_string()), map.clone().nth(max - 1));
     }
 }

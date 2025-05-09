@@ -1,16 +1,17 @@
 extern crate letz;
 
-use indicatif::ParallelProgressIterator;
-use letz::{game::*, seeds::par_seeds};
-use rayon::iter::ParallelIterator;
+use indicatif::{ParallelProgressIterator, ProgressBar};
+use letz::game::*;
+use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 
 fn main() {
-    par_seeds()
-        .progress_with_style(
-            indicatif::ProgressStyle::default_bar()
-                .template("[{elapsed_precise}] est [{duration_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10} ({percent:>3}%) {per_sec:>5}")
-                .unwrap(),
-        )
+    let seeds = letz::seeds::par_seeds();
+    let progress = ProgressBar::new(seeds.len() as u64)
+    .with_style(indicatif::ProgressStyle::default_bar()
+    .template("[{elapsed_precise}] est [{duration_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10} ({percent:>3}%) {per_sec:>5} {msg}")
+    .unwrap(),);
+    seeds
+        .progress_with(progress.clone())
         .filter_map(|seed| {
             let mut game = Game::new(&seed);
             if game.random_choice::<Tag>("Tag1") != Tag::Charm_Tag {
@@ -21,17 +22,17 @@ fn main() {
 
             for i in 1..=5 {
                 if game.random("soul_Tarot1") <= 0.997 {
-                    return None;
+                    continue;
                 }
 
                 if game.random_choice::<LegendaryJoker>(Type::Joker_Legendary.as_ref())
                     != LegendaryJoker::Perkeo
                 {
-                    return None;
+                    continue;
                 }
 
                 if game.random("edisou1") <= 0.997 {
-                    return None;
+                    continue;
                 }
 
                 perkeo_found = Some(i);
@@ -41,11 +42,9 @@ fn main() {
                 return None;
             }
 
-            Some(format!(
-                "Seed: {}, tarot card {}",
-                seed,
-                perkeo_found.unwrap()
-            ))
+            let r = format!("Seed: {}, tarot card {}", seed, perkeo_found.unwrap());
+
+            Some(r)
 
             // let mut blueprint_found = None;
 
