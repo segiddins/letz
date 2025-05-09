@@ -43,7 +43,7 @@ fn main() {
             perkeo_found = Some(i);
         }
 
-        if !perkeo_found.is_some() {
+        if perkeo_found.is_none() {
             continue;
         }
 
@@ -68,7 +68,7 @@ fn main() {
         }
 
         // now look for a negative brainstorm in the shop...
-        if !blueprint_found.is_some() {
+        if blueprint_found.is_none() {
             continue;
         }
         println!(

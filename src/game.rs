@@ -1,9 +1,8 @@
-use core::hash;
 use std::{collections::HashMap, f64, hash::Hash};
 
-use strum::{EnumIter, IntoEnumIterator, VariantArray};
+use strum::{EnumIter, VariantArray};
 
-use crate::lua_random::{self, LuaRandom};
+use crate::lua_random::LuaRandom;
 
 struct Shop {}
 const EXTRA: f64 = 0.561892350821;
@@ -60,24 +59,24 @@ enum Source {
     Cartomancer,
 }
 
-enum Suit {
-    Spade,
-    Heart,
-    Diamond,
-    Club,
-}
+// enum Suit {
+//     Spade,
+//     Heart,
+//     Diamond,
+//     Club,
+// }
 
-enum Enhancement {}
-enum Edition {}
-enum Seal {}
+// enum Enhancement {}
+// enum Edition {}
+// enum Seal {}
 
-struct Card {
-    suit: Suit,
-    value: u8,
-    enhancement: Option<Enhancement>,
-    edition: Option<Edition>,
-    seal: Option<Seal>,
-}
+// struct Card {
+//     suit: Suit,
+//     value: u8,
+//     enhancement: Option<Enhancement>,
+//     edition: Option<Edition>,
+//     seal: Option<Seal>,
+// }
 
 #[derive(Debug, Clone, strum::AsRefStr, strum::Display, Hash, PartialEq, Eq, EnumIter)]
 pub enum Type {
@@ -236,17 +235,12 @@ impl Rng {
 #[derive(Debug, Clone)]
 pub struct Game {
     rng: Rng,
-    ante: u8,
 }
 
 impl Game {
     pub fn new<S: AsRef<str>>(seed: S) -> Self {
         let rng = Rng::new(seed.as_ref().to_string());
-        Game { rng, ante: 1 }
-    }
-
-    fn tag(&mut self) -> f64 {
-        todo!()
+        Game { rng }
     }
 
     pub fn random_choice<E: VariantArray + Copy>(&mut self, id: &str) -> E {

@@ -7,17 +7,13 @@ pub struct LuaRandom {
 impl LuaRandom {
     pub fn seed(mut seed: f64) -> Self {
         let mut lr = Self { state: [0; 4] };
-        // const K_VALS: [u8; 4] = [0x01, 0x06, 0x09, 0x11];
-        const K_VALS: [u8; 4] = [0x11, 0x09, 0x06, 0x01];
 
-        for i in 0..4 {
-            let m = 1u32 << K_VALS[i];
-
+        for (i, m) in [0x11, 0x09, 0x06, 0x01].iter().enumerate() {
             seed = seed * f64::consts::PI + f64::consts::E;
 
             let mut u = seed.to_bits();
-            if u < m as u64 {
-                u += m as u64;
+            if u < *m as u64 {
+                u += *m as u64;
             }
             lr.state[i] = u;
         }
@@ -51,9 +47,8 @@ impl LuaRandom {
         tw223_gen(1, 58, 19, 28);
         tw223_gen(2, 55, 24, 7);
         tw223_gen(3, 47, 21, 8);
-        let out = (r & 0x000FFFFFFFFFFFFF) | 0x3FF0000000000000;
 
-        out
+        (r & 0x000FFFFFFFFFFFFF) | 0x3FF0000000000000
     }
 }
 
