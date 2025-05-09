@@ -47,35 +47,35 @@ fn main() {
             continue;
         }
 
-        // println!("Seed: {}, tarot card {}", seed, perkeo_found.unwrap());
+        println!("Seed: {}, tarot card {}", seed, perkeo_found.unwrap());
 
-        let mut blueprint_found = None;
+        // let mut blueprint_found = None;
 
-        for pos in 1..=2 {
-            if game.random("cdt1") * 28.0 > 20.0 {
-                continue;
-            }
+        // for pos in 1..=2 {
+        //     if game.random("cdt1") * 28.0 > 20.0 {
+        //         continue;
+        //     }
 
-            if game.random("rarity1sho") < 0.95 {
-                continue;
-            }
+        //     if game.random("rarity1sho") < 0.95 {
+        //         continue;
+        //     }
 
-            if game.random("edisho1") <= 0.997 {
-                continue;
-            }
+        //     if game.random("edisho1") <= 0.997 {
+        //         continue;
+        //     }
 
-            blueprint_found = Some(pos);
-        }
+        //     blueprint_found = Some(pos);
+        // }
 
-        // now look for a negative brainstorm in the shop...
-        if blueprint_found.is_none() {
-            continue;
-        }
-        println!(
-            "Seed: {}, tarot card {} negative rare {}",
-            seed,
-            perkeo_found.unwrap(),
-            blueprint_found.unwrap()
-        );
+        // // now look for a negative brainstorm in the shop...
+        // if blueprint_found.is_none() {
+        //     continue;
+        // }
+        // println!(
+        //     "Seed: {}, tarot card {} negative rare {}",
+        //     seed,
+        //     perkeo_found.unwrap(),
+        //     blueprint_found.unwrap()
+        // );
     }
 }
