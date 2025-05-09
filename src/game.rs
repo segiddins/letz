@@ -307,15 +307,20 @@ impl Game {
         let choices = E::VARIANTS;
         let idx = self.rng.roll(id).range(0, choices.len() as u64 - 1);
         let choice = choices[idx as usize];
-        if self.locked_items.contains(&choice.into()) {
-            todo!("Handle locked items");
-        }
+        // TODO: Handle item locking
+        // if self.locked_items.contains(&choice.into()) {
+        //     todo!("Handle locked items");
+        // }
         choice
     }
 
     pub fn random(&mut self, id: &str) -> f64 {
         let mut rng = self.rng.roll(id);
         rng.random()
+    }
+
+    pub fn seed(&self) -> &str {
+        &self.rng.seed
     }
 }
 

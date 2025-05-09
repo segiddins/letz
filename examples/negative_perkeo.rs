@@ -7,13 +7,17 @@ use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 fn main() {
     let seeds = letz::seeds::par_seeds();
     let progress = ProgressBar::new(seeds.len() as u64)
-    .with_style(indicatif::ProgressStyle::default_bar()
-    .template("[{elapsed_precise}] est [{duration_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10} ({percent:>3}%) {per_sec:>5} {msg}")
-    .unwrap(),);
+        .with_style(
+        indicatif::ProgressStyle::default_bar()
+        .template("[{elapsed_precise}] est [{duration_precise}] {bar:40.cyan/blue} {pos:>10}/{len:10} ({percent:>3}%) {per_sec:>5} {msg}")
+        .unwrap()
+    );
+    progress.set_draw_target(indicatif::ProgressDrawTarget::stdout_with_hz(1));
     seeds
         .progress_with(progress.clone())
-        .filter_map(|seed| {
-            let mut game = Game::new(&seed);
+        .map_with(Game::new(""), |game, seed| {
+            game.reset(seed);
+
             if game.random_choice::<Tag>("Tag1") != Tag::Charm_Tag {
                 return None;
             }
@@ -42,7 +46,11 @@ fn main() {
                 return None;
             }
 
-            let r = format!("Seed: {}, tarot card {}", seed, perkeo_found.unwrap());
+            let r = format!(
+                "Seed: {}, tarot card {}",
+                game.seed(),
+                perkeo_found.unwrap()
+            );
 
             Some(r)
 
@@ -75,7 +83,10 @@ fn main() {
             //     blueprint_found.unwrap()
             // );
         })
+        .filter_map(|x| x)
         .for_each(|result| {
-            println!("{}", result);
+            progress.suspend(|| {
+                println!("{}", result);
+            });
         });
 }

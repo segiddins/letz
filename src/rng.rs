@@ -4,7 +4,7 @@ use crate::lua_random::LuaRandom;
 
 #[derive(Debug, Clone)]
 pub struct Rng {
-    seed: String,
+    pub(crate) seed: String,
     hashed_seed: f64,
     states: HashMap<String, f64>,
 }
@@ -54,5 +54,6 @@ fn pseudohash<S: AsRef<str>>(s: S) -> f64 {
 }
 
 fn round13(f: f64) -> f64 {
-    format!("{:.13}", f).parse::<f64>().unwrap()
+    // format!("{:.13}", f).parse::<f64>().unwrap()
+    (f * 1e13).round() / 1e13
 }
