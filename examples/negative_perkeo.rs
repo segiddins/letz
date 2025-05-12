@@ -117,3 +117,13 @@ fn main() {
             });
         });
 }
+
+/*
+Seed: FKDRASH6, soul card 4 temperance 3
+Seed: UB9DVWII, soul card 5 temperance 3
+Seed: OMAUAS39, soul card 2 temperance 3
+Seed: NHPJJME5, soul card 2 temperance 5
+Seed: XC8SENE5, soul card 4 temperance 3
+Seed: RBGL86Y8, soul card 5 temperance 2
+Seed: 1I2K35JI, soul card 1 temperance 2
+ */

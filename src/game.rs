@@ -2,7 +2,7 @@ use std::{f64, hash::Hash};
 
 use strum::{EnumCount, EnumDiscriminants, EnumIter, IntoStaticStr, VariantArray};
 
-use crate::rng::{Rng};
+use crate::rng::Rng;
 pub use crate::rng::{IntoKey, KeyPart};
 
 #[derive(
@@ -67,16 +67,117 @@ pub enum Source {
     Cartomancer,
 }
 
-// enum Suit {
-//     Spade,
-//     Heart,
-//     Diamond,
-//     Club,
-// }
+#[derive(
+    Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy,
+)]
+enum Suit {
+    Heart,
+    Club,
+    Diamond,
+    Spade,
+}
 
-// enum Enhancement {}
-// enum Edition {}
-// enum Seal {}
+#[derive(Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq)]
+enum Blind {
+    Small,
+    Big,
+    Boss(Boss),
+}
+
+#[derive(
+    Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy,
+)]
+enum BoosterPack {
+    Arcana_Pack,
+    Jumbo_Arcana_Pack,
+    Mega_Arcana_Pack,
+    Celestial_Pack,
+    Jumbo_Celestial_Pack,
+    Mega_Celestial_Pack,
+    Standard_Pack,
+    Jumbo_Standard_Pack,
+    Mega_Standard_Pack,
+    Buffoon_Pack,
+    Jumbo_Buffoon_Pack,
+    Mega_Buffoon_Pack,
+    Spectral_Pack,
+    Jumbo_Spectral_Pack,
+    Mega_Spectral_Pack,
+}
+
+#[derive(
+    Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy,
+)]
+enum Enhancement {
+    Bonus_Card,
+    Mult_Card,
+    Wild_Card,
+    Glass_Card,
+    Steel_Card,
+    Stone_Card,
+    Gold_Card,
+    Lucky_Card,
+}
+
+#[derive(
+    Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy,
+)]
+enum Edition {
+    Foil,
+    Holographic,
+    Polychrome,
+    Negative,
+}
+
+#[derive(
+    Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy,
+)]
+enum Seal {
+    Gold,
+    Red,
+    Blue,
+    Purple,
+}
+
+#[derive(
+    Debug,
+    Clone,
+    strum::IntoStaticStr,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    EnumIter,
+    Copy,
+    VariantArray,
+    EnumCount,
+)]
+enum SpectralCard {
+    Familiar,
+    Grim,
+    Incantation,
+    Talisman,
+    Aura,
+    Wraith,
+    Sigil,
+    Ouija,
+    Ectoplasm,
+    Immolate,
+    Ankh,
+    Deja_Vu,
+    Hex,
+    Trance,
+    Medium,
+    Cryptid,
+    The_Soul,
+    Black_Hole,
+}
+
+impl From<SpectralCard> for Item {
+    fn from(val: SpectralCard) -> Self {
+        Item::SpectralCard(val)
+    }
+}
 
 // struct Card {
 //     suit: Suit,
@@ -232,6 +333,25 @@ pub enum LegendaryJoker {
     Perkeo,
 }
 
+pub enum Deck {
+    Red_Deck,
+    Blue_Deck,
+    Yellow_Deck,
+    Green_Deck,
+    Black_Deck,
+    Magic_Deck,
+    Nebula_Deck,
+    Ghost_Deck,
+    Abandoned_Deck,
+    Checkered_Deck,
+    Zodiac_Deck,
+    Painted_Deck,
+    Anaglyph_Deck,
+    Plasma_Deck,
+    Erratic_Deck,
+    Challenge_Deck,
+}
+
 #[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, EnumCount, EnumDiscriminants)]
 #[strum_discriminants(derive(VariantArray))]
 pub enum Item {
@@ -240,6 +360,7 @@ pub enum Item {
     Tag(Tag),
     Boss(Boss),
     Tarot(TarotCard),
+    SpectralCard(SpectralCard),
 }
 
 impl Item {
@@ -271,6 +392,15 @@ impl Item {
                     + BigBoss::COUNT as u8
                     + *t as u8
             }
+            Item::SpectralCard(s) => {
+                LegendaryJoker::COUNT as u8
+                    + Voucher::COUNT as u8
+                    + Tag::COUNT as u8
+                    + SmallBoss::COUNT as u8
+                    + BigBoss::COUNT as u8
+                    + TarotCard::COUNT as u8
+                    + *s as u8
+            }
         }
     }
 
@@ -282,7 +412,27 @@ impl Item {
         if value < Voucher::COUNT as u8 {
             return Voucher::VARIANTS[value as usize].into();
         }
-        unimplemented!()
+        value -= Voucher::COUNT as u8;
+        if value < Tag::COUNT as u8 {
+            return Tag::VARIANTS[value as usize].into();
+        }
+        value -= Tag::COUNT as u8;
+        if value < SmallBoss::COUNT as u8 {
+            return SmallBoss::VARIANTS[value as usize].into();
+        }
+        value -= SmallBoss::COUNT as u8;
+        if value < BigBoss::COUNT as u8 {
+            return BigBoss::VARIANTS[value as usize].into();
+        }
+        value -= BigBoss::COUNT as u8;
+        if value < TarotCard::COUNT as u8 {
+            return TarotCard::VARIANTS[value as usize].into();
+        }
+        value -= TarotCard::COUNT as u8;
+        if value < SpectralCard::COUNT as u8 {
+            return SpectralCard::VARIANTS[value as usize].into();
+        }
+        panic!("Invalid item value: {}", value);
     }
 }
 
@@ -618,14 +768,22 @@ fn test_item_reprs() {
                 ItemDiscriminants::Tarot => {
                     TarotCard::VARIANTS.iter().map(|i| (*i).into()).collect()
                 }
+                ItemDiscriminants::SpectralCard => {
+                    SpectralCard::VARIANTS.iter().map(|i| (*i).into()).collect()
+                }
             };
             items
         })
         .collect();
 
-    assert!(all_items.len() <= 256);
+    assert!(all_items.len() <= u8::MAX as usize);
 
     for (idx, item) in all_items.iter().enumerate() {
         assert_eq!(idx, item.as_int() as usize, "Item {item:?}");
+        assert_eq!(
+            *item,
+            Item::from_u8(idx as u8),
+            "Item {item:?} from_u8 {idx}"
+        );
     }
 }

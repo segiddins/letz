@@ -117,7 +117,9 @@ impl Key {
 
         inner(seed);
         for part in self.0.iter().rev() {
-            if let KeyPart::Resample(i) = part { inner(ANTE_STRS[*i as usize + 3]) }
+            if let KeyPart::Resample(i) = part {
+                inner(ANTE_STRS[*i as usize + 3])
+            }
 
             inner(match part {
                 KeyPart::Empty => continue,
