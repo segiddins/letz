@@ -1,5 +1,6 @@
 use std::f64;
 
+#[derive(Debug, Clone, Copy)]
 pub struct LuaRandom {
     state: [u64; 4],
 }

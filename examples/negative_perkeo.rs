@@ -15,41 +15,68 @@ fn main() {
     progress.set_draw_target(indicatif::ProgressDrawTarget::stdout_with_hz(1));
     seeds
         .progress_with(progress.clone())
-        .map_with(Game::new(""), |game, seed| {
-            game.reset(seed);
+        .map_with(Game::<'static>::new(""), |game, seed| {
+            unsafe {
+                // extend lifetime of &seed to 'static
+                // SAFETY: this is safe because the game is not used outside of this scope before being reseeded
+                game.reset(std::mem::transmute::<&str, &'static str>(&seed));
+            }
 
-            if game.random_choice::<Tag>("Tag1") != Tag::Charm_Tag {
+            if game.next_voucher() != Voucher::Telescope {
+                return None;
+            }
+            game.purchase_voucher(Voucher::Telescope);
+            if game.random_choice::<Voucher, _>([Type::Voucher.into(), KeyPart::Ante(2)])
+                != Voucher::Observatory
+            {
+                return None;
+            }
+
+            if game.next_tag() != Tag::Charm_Tag {
                 return None;
             }
 
             let mut perkeo_found = None;
+            let mut temperance_found = None;
 
             for i in 1..=5 {
-                if game.random("soul_Tarot1") <= 0.997 {
-                    continue;
-                }
-
-                if game.random_choice::<LegendaryJoker>(Type::Joker_Legendary.as_ref())
-                    != LegendaryJoker::Perkeo
+                if game.random([Source::Soul.into(), Type::Tarot.into(), KeyPart::Ante(1)]) <= 0.997
                 {
+                    if temperance_found.is_none()
+                        && game.random_choice::<TarotCard, _>([
+                            Type::Tarot.into(),
+                            Source::Arcana.into(),
+                            KeyPart::Ante(1),
+                        ]) == TarotCard::Temperance
+                    {
+                        temperance_found = Some(i);
+                    }
                     continue;
                 }
 
-                if game.random("edisou1") <= 0.997 {
+                if game.next_legendary_joker() != LegendaryJoker::Perkeo {
+                    continue;
+                }
+
+                if game.random([
+                    Type::Joker_Edition.into(),
+                    Source::Soul.into(),
+                    KeyPart::Ante(1),
+                ]) <= 0.997
+                {
                     continue;
                 }
 
                 perkeo_found = Some(i);
             }
 
-            if perkeo_found.is_none() {
+            let (Some(perkeo), Some(temperance)) = (perkeo_found, temperance_found) else {
                 return None;
-            }
+            };
 
             let r = format!(
-                "Seed: {}, tarot card {}",
+                "Seed: {}, soul card {perkeo} temperance {temperance}",
                 game.seed(),
-                perkeo_found.unwrap()
             );
 
             Some(r)

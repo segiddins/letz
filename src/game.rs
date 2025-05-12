@@ -1,17 +1,25 @@
-use std::{
-    collections::{HashMap, HashSet},
-    f64,
-    hash::Hash,
-};
+use core::fmt;
+use std::{collections::HashSet, f64, hash::Hash};
 
-use strum::{AsRefStr, EnumIter, VariantArray};
+use strum::{EnumCount, EnumDiscriminants, EnumIter, IntoStaticStr, VariantArray};
 
-use crate::rng::Rng;
+use crate::rng::{self, Key, Rng};
+pub use crate::rng::{IntoKey, KeyPart};
 
 #[derive(
-    Debug, Clone, strum::AsRefStr, strum::Display, Hash, PartialEq, Eq, EnumIter, VariantArray,
+    Debug,
+    Clone,
+    strum::IntoStaticStr,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    EnumIter,
+    VariantArray,
+    Copy,
 )]
-enum Source {
+#[strum(const_into_str)]
+pub enum Source {
     #[strum(to_string = "sho")]
     Shop,
     #[strum(to_string = "emp")]
@@ -79,7 +87,10 @@ enum Source {
 //     seal: Option<Seal>,
 // }
 
-#[derive(Debug, Clone, strum::AsRefStr, strum::Display, Hash, PartialEq, Eq, EnumIter)]
+#[derive(
+    Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy,
+)]
+#[strum(const_into_str)]
 pub enum Type {
     #[strum(to_string = "Joker1")]
     Joker_Common,
@@ -162,7 +173,17 @@ pub enum Type {
 }
 
 #[derive(
-    Debug, Clone, strum::AsRefStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy, VariantArray,
+    Debug,
+    Clone,
+    strum::IntoStaticStr,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    EnumIter,
+    Copy,
+    VariantArray,
+    EnumCount,
 )]
 pub enum Tag {
     Uncommon_Tag,
@@ -192,7 +213,17 @@ pub enum Tag {
 }
 
 #[derive(
-    Debug, Clone, strum::AsRefStr, strum::Display, Hash, PartialEq, Eq, EnumIter, VariantArray, Copy,
+    Debug,
+    Clone,
+    strum::IntoStaticStr,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    EnumIter,
+    VariantArray,
+    Copy,
+    EnumCount,
 )]
 pub enum LegendaryJoker {
     Canio,
@@ -202,12 +233,58 @@ pub enum LegendaryJoker {
     Perkeo,
 }
 
-#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, EnumCount, EnumDiscriminants)]
+#[strum_discriminants(derive(VariantArray))]
 pub enum Item {
     LegendaryJoker(LegendaryJoker),
     Voucher(Voucher),
     Tag(Tag),
     Boss(Boss),
+    Tarot(TarotCard),
+}
+
+impl Item {
+    pub fn as_int(&self) -> u8 {
+        match self {
+            Item::LegendaryJoker(i) => *i as u8,
+            Item::Voucher(v) => LegendaryJoker::COUNT as u8 + *v as u8,
+            Item::Tag(t) => LegendaryJoker::COUNT as u8 + Voucher::COUNT as u8 + *t as u8,
+            Item::Boss(boss) => match boss {
+                Boss::SmallBoss(small) => {
+                    LegendaryJoker::COUNT as u8
+                        + Voucher::COUNT as u8
+                        + Tag::COUNT as u8
+                        + *small as u8
+                }
+                Boss::BigBoss(large) => {
+                    LegendaryJoker::COUNT as u8
+                        + Voucher::COUNT as u8
+                        + Tag::COUNT as u8
+                        + SmallBoss::COUNT as u8
+                        + *large as u8
+                }
+            },
+            Item::Tarot(t) => {
+                LegendaryJoker::COUNT as u8
+                    + Voucher::COUNT as u8
+                    + Tag::COUNT as u8
+                    + SmallBoss::COUNT as u8
+                    + BigBoss::COUNT as u8
+                    + *t as u8
+            }
+        }
+    }
+
+    pub fn from_u8(mut value: u8) -> Self {
+        if value < LegendaryJoker::COUNT as u8 {
+            return LegendaryJoker::VARIANTS[value as usize].into();
+        }
+        value -= LegendaryJoker::COUNT as u8;
+        if value < Voucher::COUNT as u8 {
+            return Voucher::VARIANTS[value as usize].into();
+        }
+        unimplemented!()
+    }
 }
 
 impl Into<Item> for LegendaryJoker {
@@ -234,7 +311,19 @@ impl Into<Item> for Boss {
     }
 }
 
-#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, AsRefStr)]
+impl Into<Item> for SmallBoss {
+    fn into(self) -> Item {
+        Item::Boss(self.into())
+    }
+}
+
+impl Into<Item> for BigBoss {
+    fn into(self) -> Item {
+        Item::Boss(self.into())
+    }
+}
+
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, IntoStaticStr)]
 pub enum Boss {
     SmallBoss(SmallBoss),
     BigBoss(BigBoss),
@@ -251,19 +340,92 @@ impl Into<Boss> for BigBoss {
     }
 }
 
-#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, AsRefStr)]
+#[derive(
+    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+)]
 pub enum SmallBoss {
     Serpent,
+    The_Mouth,
 }
 
-#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, AsRefStr)]
+#[derive(
+    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+)]
 pub enum BigBoss {
     VioletVessel,
+    CrimsonHeart,
 }
 
-#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, AsRefStr)]
+#[derive(
+    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+)]
+pub enum TarotCard {
+    The_Fool,
+    The_Magician,
+    The_High_Priestess,
+    The_Empress,
+    The_Emperor,
+    The_Hierophant,
+    The_Lovers,
+    The_Chariot,
+    Justice,
+    The_Hermit,
+    The_Wheel_of_Fortune,
+    Strength,
+    The_Hanged_Man,
+    Death,
+    Temperance,
+    The_Devil,
+    The_Tower,
+    The_Star,
+    The_Moon,
+    The_Sun,
+    Judgement,
+    The_World,
+}
+
+impl Into<Item> for TarotCard {
+    fn into(self) -> Item {
+        Item::Tarot(self)
+    }
+}
+
+#[derive(
+    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+)]
 pub enum Voucher {
+    Overstock,
+    Overstock_Plus,
+    Clearance_Sale,
+    Liquidation,
+    Hone,
+    Glow_Up,
+    Reroll_Surplus,
+    Reroll_Glut,
+    Crystal_Ball,
+    Omen_Globe,
+    Telescope,
+    Observatory,
+    Grabber,
+    Nacho_Tong,
+    Wasteful,
+    Recyclomancy,
+    Tarot_Merchant,
+    Tarot_Tycoon,
+    Planet_Merchant,
+    Planet_Tycoon,
+    Seed_Money,
+    Money_Tree,
     Blank,
+    Antimatter,
+    Magic_Trick,
+    Illusion,
+    Hieroglyph,
+    Petroglyph,
+    Directors_Cut,
+    Retcon,
+    Paint_Brush,
+    Palette,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -275,46 +437,109 @@ struct Ante {
 }
 
 #[derive(Debug, Clone)]
-pub struct Game {
-    rng: Rng,
+pub struct Game<'a> {
+    rng: Rng<'a>,
     ante: Ante,
-    locked_items: HashSet<Item>,
+    locked_items: [bool; 256],
 }
 
-impl Game {
-    pub fn new<S: AsRef<str>>(seed: S) -> Self {
-        let rng = Rng::new(seed.as_ref().to_string());
-        let game = Game {
+impl<'a> Game<'a> {
+    fn default_locked_items(&mut self) {
+        if self.ante.number < 2 {
+            self.lock(Tag::Negative_Tag);
+            self.lock(Tag::Standard_Tag);
+            self.lock(Tag::Meteor_Tag);
+            self.lock(Tag::Buffoon_Tag);
+            self.lock(Tag::Handy_Tag);
+            self.lock(Tag::Garbage_Tag);
+            self.lock(Tag::Ethereal_Tag);
+            self.lock(Tag::Top_up_Tag);
+            self.lock(Tag::Orbital_Tag);
+
+            Voucher::VARIANTS
+                .iter()
+                .enumerate()
+                .filter_map(|(i, v)| if i.is_multiple_of(2) { None } else { Some(v) })
+                .for_each(|v| {
+                    self.lock(*v);
+                });
+        }
+    }
+
+    pub fn unlock<T: Into<Item>>(&mut self, item: T) {
+        let i = item.into().as_int();
+        self.locked_items[i as usize] = false;
+    }
+
+    pub fn lock<T: Into<Item>>(&mut self, item: T) {
+        let i = item.into().as_int();
+        self.locked_items[i as usize] = true;
+    }
+
+    pub fn new(seed: &'a str) -> Self {
+        let rng = Rng::new(seed);
+        let mut game = Game {
             rng,
             ante: Ante {
-                number: 0,
+                number: 1,
                 skip_tags: [Tag::Uncommon_Tag, Tag::Rare_Tag],
                 boss: Boss::SmallBoss(SmallBoss::Serpent),
                 voucher: Voucher::Blank,
             },
-            locked_items: HashSet::new(),
+            locked_items: [false; 256],
         };
+        game.default_locked_items();
         game
     }
 
-    pub fn reset<S: Into<String>>(&mut self, seed: S) {
+    pub fn reset(&mut self, seed: &'a str) {
         self.rng.reseed(seed);
-        self.locked_items.clear();
+        self.locked_items.fill(false);
         self.ante.number = 1;
+        self.default_locked_items();
     }
 
-    pub fn random_choice<E: VariantArray + Copy + Into<Item>>(&mut self, id: &str) -> E {
+    pub fn random_choice<E: VariantArray + Copy + Into<Item>, K: IntoKey>(&mut self, key: K) -> E {
+        let mut key = key.key();
         let choices = E::VARIANTS;
-        let idx = self.rng.roll(id).range(0, choices.len() as u64 - 1);
-        let choice = choices[idx as usize];
-        // TODO: Handle item locking
-        // if self.locked_items.contains(&choice.into()) {
-        //     todo!("Handle locked items");
-        // }
-        choice
+        for i in 0..u8::MAX {
+            if i > 0 {
+                key.resample(i - 1);
+            }
+            let idx = self.rng.roll(key).range(0, choices.len() as u64 - 1);
+            let choice = choices[idx as usize];
+            if !self.locked_items[choice.into().as_int() as usize] {
+                return choice;
+            }
+        }
+        unreachable!("Shouldn't need more than 256 iterations");
     }
 
-    pub fn random(&mut self, id: &str) -> f64 {
+    #[inline]
+    pub fn next_voucher(&mut self) -> Voucher {
+        self.random_choice::<Voucher, _>([Type::Voucher.into(), KeyPart::Ante(self.ante.number)])
+    }
+
+    #[inline]
+    pub fn next_tag(&mut self) -> Tag {
+        self.random_choice::<Tag, _>([Type::Tags.into(), KeyPart::Ante(self.ante.number)])
+    }
+
+    #[inline]
+    pub fn next_legendary_joker(&mut self) -> LegendaryJoker {
+        self.random_choice::<LegendaryJoker, _>([Type::Joker_Legendary.into()])
+    }
+
+    pub fn purchase_voucher(&mut self, voucher: Voucher) {
+        if voucher as isize % 2 == 0 {
+            self.lock(voucher);
+            self.unlock(Voucher::VARIANTS[voucher as usize + 1]);
+        } else {
+            self.lock(voucher);
+        }
+    }
+
+    pub fn random<K: IntoKey>(&mut self, id: K) -> f64 {
         let mut rng = self.rng.roll(id);
         rng.random()
     }
@@ -329,13 +554,79 @@ fn test_game_tag_1() {
     let mut game = Game::new("TESTABCD");
 
     assert_eq!(
-        game.random_choice::<Tag>("Tag1"),
+        game.random_choice::<Tag, _>([Type::Tags.into(), KeyPart::Ante(1)]),
         Tag::Coupon_Tag,
         "First tag in ante 1"
     );
     assert_eq!(
-        game.random_choice::<Tag>("Tag1"),
+        game.random_choice::<Tag, _>([Type::Tags.into(), KeyPart::Ante(1)]),
         Tag::Speed_Tag,
         "Second tag in ante 1"
     );
+
+    game.reset("ON2PPLR6");
+
+    assert_eq!(
+        game.random_choice::<Tag, _>([Type::Tags.into(), KeyPart::Ante(1)]),
+        Tag::Charm_Tag,
+        "First tag in ante 1"
+    );
+    assert_eq!(
+        game.random_choice::<Tag, _>([Type::Tags.into(), KeyPart::Ante(1)]),
+        Tag::Foil_Tag,
+        "Second tag in ante 1"
+    );
+
+    game.reset("3FLBOIVG");
+    assert_eq!(
+        game.random_choice::<Tag, _>([Type::Tags.into(), KeyPart::Ante(1)]),
+        Tag::Coupon_Tag,
+        "First tag in ante 1 for seed {}",
+        game.seed()
+    );
+    assert_eq!(
+        game.random_choice::<Tag, _>([Type::Tags.into(), KeyPart::Ante(1)]),
+        Tag::Coupon_Tag,
+        "Second tag in ante 1"
+    );
+    assert_eq!(
+        game.random_choice::<Voucher, _>([Type::Voucher.into(), KeyPart::Ante(1)]),
+        Voucher::Wasteful,
+        "Voucher in ante 1"
+    );
+}
+
+#[test]
+fn test_item_reprs() {
+    assert_eq!(2, std::mem::size_of::<Item>());
+    let all_items: Vec<Item> = ItemDiscriminants::VARIANTS
+        .iter()
+        .flat_map(|disc| {
+            let items: Vec<Item> = match disc {
+                ItemDiscriminants::LegendaryJoker => LegendaryJoker::VARIANTS
+                    .iter()
+                    .map(|i| (*i).into())
+                    .collect(),
+                ItemDiscriminants::Voucher => {
+                    Voucher::VARIANTS.iter().map(|i| (*i).into()).collect()
+                }
+                ItemDiscriminants::Tag => Tag::VARIANTS.iter().map(|i| (*i).into()).collect(),
+                ItemDiscriminants::Boss => SmallBoss::VARIANTS
+                    .iter()
+                    .map(|i| (*i).into())
+                    .chain(BigBoss::VARIANTS.iter().map(|i| (*i).into()))
+                    .collect(),
+                ItemDiscriminants::Tarot => {
+                    TarotCard::VARIANTS.iter().map(|i| (*i).into()).collect()
+                }
+            };
+            items
+        })
+        .collect();
+
+    assert!(all_items.len() <= 256);
+
+    for (idx, item) in all_items.iter().enumerate() {
+        assert_eq!(idx, item.as_int() as usize, "Item {item:?}");
+    }
 }

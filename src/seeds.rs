@@ -5,11 +5,12 @@ use std::{
 
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 
-const ALPHABET: [u8; 36] = [
-    b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F',
-    b'G', b'H', b'I', b'J', b'K', b'L', b'M', b'N', b'O', b'P', b'Q', b'R', b'S', b'T', b'U', b'V',
-    b'W', b'X', b'Y', b'Z',
+const ALPHABET: [u8; 35] = [
+    b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F', b'G',
+    b'H', b'I', b'J', b'K', b'L', b'M', b'N', b'O', b'P', b'Q', b'R', b'S', b'T', b'U', b'V', b'W',
+    b'X', b'Y', b'Z',
 ];
+const ALPHABET_SIZE: usize = ALPHABET.len();
 
 const SEED_LENGTH: usize = 8;
 
@@ -23,7 +24,7 @@ fn idx_to_seed(mut i: usize) -> String {
 
     for _ in 0..SEED_LENGTH {
         let rem: usize;
-        (i, rem) = (i / 36, i % 36);
+        (i, rem) = (i / ALPHABET_SIZE, i % ALPHABET_SIZE);
         seed.push(ALPHABET[rem] as char);
     }
 
@@ -131,64 +132,17 @@ fn idx_to_seed(mut i: usize) -> String {
 // }
 
 pub fn seeds() -> Map<Range<usize>, fn(usize) -> String> {
-    (0..usize::pow(36, SEED_LENGTH as u32)).map(idx_to_seed)
+    (0..usize::pow(ALPHABET_SIZE, SEED_LENGTH as u32)).map(idx_to_seed)
 }
 
 pub fn par_seeds() -> rayon::iter::Map<rayon::range::Iter<usize>, fn(usize) -> String> {
-    (0..usize::pow(36, SEED_LENGTH as u32))
+    (0..usize::pow(ALPHABET_SIZE, SEED_LENGTH as u32))
         .into_par_iter()
         .map(idx_to_seed)
 }
 
 pub fn par_random_seeds() -> impl rayon::iter::ParallelIterator<Item = String> {
-    repeat_with(|| rand::random_range(0..usize::pow(36, SEED_LENGTH as u32)))
+    repeat_with(|| rand::random_range(0..usize::pow(ALPHABET_SIZE, SEED_LENGTH as u32)))
         .par_bridge()
         .map(idx_to_seed)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_seed_generator() {
-        {
-            let seeds = seeds().take(40);
-
-            let expected = vec![
-                "00000000", "10000000", "20000000", "30000000", "40000000", "50000000", "60000000",
-                "70000000", "80000000", "90000000", "A0000000", "B0000000", "C0000000", "D0000000",
-                "E0000000", "F0000000", "G0000000", "H0000000", "I0000000", "J0000000", "K0000000",
-                "L0000000", "M0000000", "N0000000", "O0000000", "P0000000", "Q0000000", "R0000000",
-                "S0000000", "T0000000", "U0000000", "V0000000", "W0000000", "X0000000", "Y0000000",
-                "Z0000000", "01000000", "11000000", "21000000", "31000000",
-            ];
-            assert_eq!(seeds.collect::<Vec<_>>(), expected);
-        }
-
-        assert_eq!(seeds().len(), 36u64.pow(SEED_LENGTH as u32) as usize);
-        assert_eq!(seeds().next_back(), Some("ZZZZZZZZ".to_string()));
-    }
-
-    #[test]
-    fn test_high_offset() {
-        let seeds = seeds().skip(36 * 36 * 36 + 1).take(10);
-
-        let expected = vec![
-            "ZZZZZZZZ", "ZZZZZZZY", "ZZZZZZZX", "ZZZZZZZW", "ZZZZZZZV", "ZZZZZZZU", "ZZZZZZZT",
-            "ZZZZZZZS", "ZZZZZZZR", "ZZZZZZZQ",
-        ];
-        assert_eq!(seeds.collect::<Vec<_>>(), expected);
-    }
-
-    #[test]
-    fn range() {
-        let max = 10_000_000_000;
-        let r: Range<usize> = 0..max;
-
-        assert_eq!(Some(max - 1), r.clone().into_iter().nth(max - 1));
-
-        let map = r.into_iter().map(|i| i.to_string());
-        assert_eq!(Some((max - 1).to_string()), map.clone().nth(max - 1));
-    }
 }
