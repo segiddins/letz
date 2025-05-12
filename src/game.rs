@@ -1,9 +1,8 @@
-use core::fmt;
-use std::{collections::HashSet, f64, hash::Hash};
+use std::{f64, hash::Hash};
 
 use strum::{EnumCount, EnumDiscriminants, EnumIter, IntoStaticStr, VariantArray};
 
-use crate::rng::{self, Key, Rng};
+use crate::rng::{Rng};
 pub use crate::rng::{IntoKey, KeyPart};
 
 #[derive(
@@ -287,39 +286,39 @@ impl Item {
     }
 }
 
-impl Into<Item> for LegendaryJoker {
-    fn into(self) -> Item {
-        Item::LegendaryJoker(self)
+impl From<LegendaryJoker> for Item {
+    fn from(val: LegendaryJoker) -> Self {
+        Item::LegendaryJoker(val)
     }
 }
 
-impl Into<Item> for Voucher {
-    fn into(self) -> Item {
-        Item::Voucher(self)
+impl From<Voucher> for Item {
+    fn from(val: Voucher) -> Self {
+        Item::Voucher(val)
     }
 }
 
-impl Into<Item> for Tag {
-    fn into(self) -> Item {
-        Item::Tag(self)
+impl From<Tag> for Item {
+    fn from(val: Tag) -> Self {
+        Item::Tag(val)
     }
 }
 
-impl Into<Item> for Boss {
-    fn into(self) -> Item {
-        Item::Boss(self)
+impl From<Boss> for Item {
+    fn from(val: Boss) -> Self {
+        Item::Boss(val)
     }
 }
 
-impl Into<Item> for SmallBoss {
-    fn into(self) -> Item {
-        Item::Boss(self.into())
+impl From<SmallBoss> for Item {
+    fn from(val: SmallBoss) -> Self {
+        Item::Boss(val.into())
     }
 }
 
-impl Into<Item> for BigBoss {
-    fn into(self) -> Item {
-        Item::Boss(self.into())
+impl From<BigBoss> for Item {
+    fn from(val: BigBoss) -> Self {
+        Item::Boss(val.into())
     }
 }
 
@@ -329,14 +328,14 @@ pub enum Boss {
     BigBoss(BigBoss),
 }
 
-impl Into<Boss> for SmallBoss {
-    fn into(self) -> Boss {
-        Boss::SmallBoss(self)
+impl From<SmallBoss> for Boss {
+    fn from(val: SmallBoss) -> Self {
+        Boss::SmallBoss(val)
     }
 }
-impl Into<Boss> for BigBoss {
-    fn into(self) -> Boss {
-        Boss::BigBoss(self)
+impl From<BigBoss> for Boss {
+    fn from(val: BigBoss) -> Self {
+        Boss::BigBoss(val)
     }
 }
 
@@ -384,9 +383,9 @@ pub enum TarotCard {
     The_World,
 }
 
-impl Into<Item> for TarotCard {
-    fn into(self) -> Item {
-        Item::Tarot(self)
+impl From<TarotCard> for Item {
+    fn from(val: TarotCard) -> Self {
+        Item::Tarot(val)
     }
 }
 
@@ -545,7 +544,7 @@ impl<'a> Game<'a> {
     }
 
     pub fn seed(&self) -> &str {
-        &self.rng.seed
+        self.rng.seed
     }
 }
 

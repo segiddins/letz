@@ -68,15 +68,15 @@ impl KeyPart {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Key([KeyPart; 4]);
 
-impl Into<KeyPart> for game::Source {
-    fn into(self) -> KeyPart {
-        KeyPart::Source(self)
+impl From<game::Source> for KeyPart {
+    fn from(val: game::Source) -> Self {
+        KeyPart::Source(val)
     }
 }
 
-impl Into<KeyPart> for game::Type {
-    fn into(self) -> KeyPart {
-        KeyPart::Type(self)
+impl From<game::Type> for KeyPart {
+    fn from(val: game::Type) -> Self {
+        KeyPart::Type(val)
     }
 }
 
@@ -117,10 +117,7 @@ impl Key {
 
         inner(seed);
         for part in self.0.iter().rev() {
-            match part {
-                KeyPart::Resample(i) => inner(ANTE_STRS[*i as usize + 3]),
-                _ => {}
-            }
+            if let KeyPart::Resample(i) = part { inner(ANTE_STRS[*i as usize + 3]) }
 
             inner(match part {
                 KeyPart::Empty => continue,
