@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f64};
+use std::{collections::HashMap, f64, num::NonZero};
 
 use crate::{game, lua_random::LuaRandom};
 
@@ -16,7 +16,7 @@ pub enum KeyPart {
     Ante(i8),
     Source(game::Source),
     Type(game::Type),
-    Resample(u8),
+    Resample(NonZero<u8>),
 }
 
 const ANTE_STRS: [&str; 52] = [
@@ -25,29 +25,6 @@ const ANTE_STRS: [&str; 52] = [
     "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47",
     "48", "49", "50",
 ];
-
-// impl AsRef<str> for KeyPart<'_> {
-//     #[inline]
-//     fn as_ref(&self) -> &str {
-//         match self {
-//             KeyPart::Empty => "",
-//             KeyPart::Ante(i) => {
-//                 assert!(*i >= -1 && *i < ANTE_STRS.len() as i8 - 1);
-//                 ANTE_STRS[*i as usize + 1]
-//             }
-//             KeyPart::Source(source) => source.as_ref(),
-//             KeyPart::Type(typ) => typ.as_ref(),
-//             KeyPart::Resample(i) => {
-//                 assert!(
-//                     *i < RESAMPLE_STRS.len() as u8,
-//                     "Resample index {i} out of bounds"
-//                 );
-//                 RESAMPLE_STRS[*i as usize]
-//             }
-//             KeyPart::Seed(seed) => seed,
-//         }
-//     }
-// }
 
 impl KeyPart {
     #[inline]
@@ -60,13 +37,16 @@ impl KeyPart {
             }
             KeyPart::Source(source) => source.into_str().len(),
             KeyPart::Type(typ) => typ.into_str().len(),
-            KeyPart::Resample(i) => "_resample".len() + ANTE_STRS[*i as usize + 3].len(),
+            KeyPart::Resample(i) => "_resample".len() + ANTE_STRS[i.get() as usize + 2].len(),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Key([KeyPart; 4]);
+
+static_assertions::assert_eq_size!(KeyPart, u16);
+static_assertions::assert_eq_size!(Key, u64);
 
 impl From<game::Source> for KeyPart {
     fn from(val: game::Source) -> Self {
@@ -81,7 +61,7 @@ impl From<game::Type> for KeyPart {
 }
 
 impl Key {
-    pub fn resample(&mut self, i: u8) {
+    pub fn resample(&mut self, i: NonZero<u8>) {
         #[cfg(debug_assertions)]
         match self.0[3] {
             KeyPart::Empty | KeyPart::Resample(_) => {}
@@ -118,7 +98,7 @@ impl Key {
         inner(seed);
         for part in self.0.iter().rev() {
             if let KeyPart::Resample(i) = part {
-                inner(ANTE_STRS[*i as usize + 3])
+                inner(ANTE_STRS[i.get() as usize + 2])
             }
 
             inner(match part {

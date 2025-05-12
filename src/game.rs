@@ -1,5 +1,6 @@
-use std::{f64, hash::Hash};
+use std::{f64, hash::Hash, num::NonZero};
 
+use enum_map::EnumMap;
 use strum::{EnumCount, EnumDiscriminants, EnumIter, IntoStaticStr, VariantArray};
 
 use crate::rng::Rng;
@@ -16,6 +17,7 @@ pub use crate::rng::{IntoKey, KeyPart};
     EnumIter,
     VariantArray,
     Copy,
+    enum_map::Enum,
 )]
 #[strum(const_into_str)]
 pub enum Source {
@@ -151,8 +153,9 @@ enum Seal {
     Copy,
     VariantArray,
     EnumCount,
+    enum_map::Enum,
 )]
-enum SpectralCard {
+pub enum SpectralCard {
     Familiar,
     Grim,
     Incantation,
@@ -188,7 +191,16 @@ impl From<SpectralCard> for Item {
 // }
 
 #[derive(
-    Debug, Clone, strum::IntoStaticStr, strum::Display, Hash, PartialEq, Eq, EnumIter, Copy,
+    Debug,
+    Clone,
+    strum::IntoStaticStr,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    EnumIter,
+    Copy,
+    enum_map::Enum,
 )]
 #[strum(const_into_str)]
 pub enum Type {
@@ -284,6 +296,7 @@ pub enum Type {
     Copy,
     VariantArray,
     EnumCount,
+    enum_map::Enum,
 )]
 pub enum Tag {
     Uncommon_Tag,
@@ -324,6 +337,7 @@ pub enum Tag {
     VariantArray,
     Copy,
     EnumCount,
+    enum_map::Enum,
 )]
 pub enum LegendaryJoker {
     Canio,
@@ -352,7 +366,9 @@ pub enum Deck {
     Challenge_Deck,
 }
 
-#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, EnumCount, EnumDiscriminants)]
+#[derive(
+    enum_map::Enum, Debug, Clone, strum::Display, Hash, PartialEq, Eq, EnumCount, EnumDiscriminants,
+)]
 #[strum_discriminants(derive(VariantArray))]
 pub enum Item {
     LegendaryJoker(LegendaryJoker),
@@ -472,7 +488,7 @@ impl From<BigBoss> for Item {
     }
 }
 
-#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, IntoStaticStr)]
+#[derive(Debug, Clone, strum::Display, Hash, PartialEq, Eq, IntoStaticStr, enum_map::Enum)]
 pub enum Boss {
     SmallBoss(SmallBoss),
     BigBoss(BigBoss),
@@ -490,7 +506,17 @@ impl From<BigBoss> for Boss {
 }
 
 #[derive(
-    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+    Debug,
+    Clone,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    VariantArray,
+    IntoStaticStr,
+    Copy,
+    EnumCount,
+    enum_map::Enum,
 )]
 pub enum SmallBoss {
     Serpent,
@@ -498,7 +524,17 @@ pub enum SmallBoss {
 }
 
 #[derive(
-    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+    Debug,
+    Clone,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    VariantArray,
+    IntoStaticStr,
+    Copy,
+    EnumCount,
+    enum_map::Enum,
 )]
 pub enum BigBoss {
     VioletVessel,
@@ -506,7 +542,17 @@ pub enum BigBoss {
 }
 
 #[derive(
-    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+    Debug,
+    Clone,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    VariantArray,
+    IntoStaticStr,
+    Copy,
+    EnumCount,
+    enum_map::Enum,
 )]
 pub enum TarotCard {
     The_Fool,
@@ -540,7 +586,17 @@ impl From<TarotCard> for Item {
 }
 
 #[derive(
-    Debug, Clone, strum::Display, Hash, PartialEq, Eq, VariantArray, IntoStaticStr, Copy, EnumCount,
+    Debug,
+    Clone,
+    strum::Display,
+    Hash,
+    PartialEq,
+    Eq,
+    VariantArray,
+    IntoStaticStr,
+    Copy,
+    EnumCount,
+    enum_map::Enum,
 )]
 pub enum Voucher {
     Overstock,
@@ -589,7 +645,7 @@ struct Ante {
 pub struct Game<'a> {
     rng: Rng<'a>,
     ante: Ante,
-    locked_items: [bool; 256],
+    locked_items: EnumMap<Item, bool>,
 }
 
 impl<'a> Game<'a> {
@@ -616,13 +672,11 @@ impl<'a> Game<'a> {
     }
 
     pub fn unlock<T: Into<Item>>(&mut self, item: T) {
-        let i = item.into().as_int();
-        self.locked_items[i as usize] = false;
+        self.locked_items[item.into()] = false;
     }
 
     pub fn lock<T: Into<Item>>(&mut self, item: T) {
-        let i = item.into().as_int();
-        self.locked_items[i as usize] = true;
+        self.locked_items[item.into()] = true;
     }
 
     pub fn new(seed: &'a str) -> Self {
@@ -635,7 +689,7 @@ impl<'a> Game<'a> {
                 boss: Boss::SmallBoss(SmallBoss::Serpent),
                 voucher: Voucher::Blank,
             },
-            locked_items: [false; 256],
+            locked_items: Default::default(),
         };
         game.default_locked_items();
         game
@@ -643,7 +697,7 @@ impl<'a> Game<'a> {
 
     pub fn reset(&mut self, seed: &'a str) {
         self.rng.reseed(seed);
-        self.locked_items.fill(false);
+        self.locked_items.clear();
         self.ante.number = 1;
         self.default_locked_items();
     }
@@ -653,11 +707,11 @@ impl<'a> Game<'a> {
         let choices = E::VARIANTS;
         for i in 0..u8::MAX {
             if i > 0 {
-                key.resample(i - 1);
+                key.resample(NonZero::new(i).unwrap());
             }
             let idx = self.rng.roll(key).range(0, choices.len() as u64 - 1);
             let choice = choices[idx as usize];
-            if !self.locked_items[choice.into().as_int() as usize] {
+            if !self.locked_items[choice.into()] {
                 return choice;
             }
         }
@@ -787,3 +841,11 @@ fn test_item_reprs() {
         );
     }
 }
+
+#[test]
+fn test_item_enum_map() {
+    let map: EnumMap<Item, bool> = EnumMap::default();
+    assert_eq!(map.len(), 105);
+}
+
+static_assertions::assert_eq_size!(Item, u16);

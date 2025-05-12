@@ -10,8 +10,10 @@ name = "negative_perkeo"
 name = "buggy_erratic"
 
 [dependencies]
+enum-map = "2.7.3"
 indicatif = { version = "0.17.11", features = ["rayon"] }
 rand = "0.9.1"
 rayon = "1.10.0"
+static_assertions = "1.1.0"
 strum = { version = "0.27.1", features = ["derive"] }
 strum_macros = "0.27.1"
