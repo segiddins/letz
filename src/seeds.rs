@@ -73,11 +73,11 @@ impl Seed {
     }
 }
 
-// 49..=57, 65..=90
-const ALPHABET: [u8; 35] = [
+// Balatro random_string: '1'..='9', 'A'..='N', 'P'..='Z' (no zero or O).
+const ALPHABET: [u8; 34] = [
     b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F', b'G',
-    b'H', b'I', b'J', b'K', b'L', b'M', b'N', b'O', b'P', b'Q', b'R', b'S', b'T', b'U', b'V', b'W',
-    b'X', b'Y', b'Z',
+    b'H', b'I', b'J', b'K', b'L', b'M', b'N', b'P', b'Q', b'R', b'S', b'T', b'U', b'V', b'W', b'X',
+    b'Y', b'Z',
 ];
 const ALPHABET_SIZE: usize = ALPHABET.len();
 
@@ -86,7 +86,7 @@ const SEED_LENGTH: usize = 8;
 pub const SEED_COUNT: usize =
     (ALPHABET_SIZE as u64).pow(SEED_LENGTH as u32 + 1) as usize / (ALPHABET_SIZE as usize - 1);
 
-static_assertions::const_assert_eq!(SEED_COUNT, 2_318_107_019_761);
+static_assertions::const_assert_eq!(SEED_COUNT, 1_839_908_871_711);
 
 impl From<&str> for Seed {
     fn from(seed: &str) -> Self {
@@ -193,5 +193,15 @@ mod tests {
     fn test_seed_index_9() {
         let seed = Seed::from_index(9);
         assert_eq!(seed.to_index(), 9, "Failed for index 9: {:?}", seed);
+    }
+
+    #[test]
+    fn test_generated_alphabet_excludes_o() {
+        assert_eq!(ALPHABET_SIZE, 34);
+        assert!(!ALPHABET.contains(&b'O'));
+        assert_eq!(Seed::from_index(24).as_str(), "P");
+        assert_eq!(Seed::from_index(35).as_str(), "11");
+        assert_eq!(seeds().len(), 34_usize.pow(8));
+        assert!(std::panic::catch_unwind(|| Seed::from("O")).is_err());
     }
 }

@@ -179,8 +179,29 @@ impl<'a> Rng<'a> {
 
 #[inline]
 fn round13(f: f64) -> f64 {
-    // format!("{:.13}", f).parse::<f64>().unwrap()
-    (f * 1e13).round() / 1e13
+    // RNG states are fractions in [0, 1). Round the *exact* binary value
+    // times 10^13 using integers, then parse the resulting decimal fraction.
+    // This matches Lua's tonumber(string.format("%.13f", f)) without allocating
+    // or first rounding the floating-point product f * 1e13.
+    debug_assert!((0.0..1.0).contains(&f));
+    let bits = f.to_bits();
+    let exponent = ((bits >> 52) & 0x7ff) as u32;
+    if exponent == 0 {
+        return 0.0; // even the largest subnormal rounds to zero
+    }
+    let significand = (bits & ((1_u64 << 52) - 1)) | (1_u64 << 52);
+    let numerator = significand as u128 * 10_000_000_000_000_u128;
+    let shift = 1075 - exponent;
+    if shift >= 128 {
+        return 0.0;
+    }
+    let mut digits = numerator >> shift;
+    let remainder = numerator & ((1_u128 << shift) - 1);
+    let halfway = 1_u128 << (shift - 1);
+    if remainder > halfway || (remainder == halfway && digits & 1 != 0) {
+        digits += 1;
+    }
+    digits as f64 / 10_000_000_000_000.0
 }
 
 #[cfg(test)]
@@ -191,5 +212,57 @@ mod tests {
     fn test_pseudohash() {
         // assert_eq!(pseudohash("test_seed"), 0.4112901442931616);
         assert_eq!(Key::default().pseudohash("test_seed"), 0.4112901442931616);
+    }
+
+    #[test]
+    fn decimal_rounding_regression() {
+        assert_eq!(round13(0.26587044836955), 0.2658704483695);
+    }
+
+    #[test]
+    fn tag1_state_regression() {
+        let key = [KeyPart::Type(game::Type::Tags), KeyPart::Ante(1)];
+        let mut rng = Rng::new("1111126L");
+        rng.roll(key);
+        assert_eq!(rng.states[&key.key()], 0.8830814427953);
+    }
+
+    #[test]
+    fn tag_resampling_regression() {
+        let mut game = game::Game::new("111111SJ");
+        assert_eq!(game.next_tag(), game::Tag::Boss_Tag);
+        assert_eq!(game.next_tag(), game::Tag::Charm_Tag);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn decimal_rounding_matches_c_printf() {
+        use std::ffi::{c_char, c_int};
+        unsafe extern "C" {
+            fn snprintf(buf: *mut c_char, len: usize, fmt: *const c_char, ...) -> c_int;
+        }
+        let mut x = 0x8422_7f93_af10_97d1_u64;
+        let random_values = (0..100_000).map(|_| {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            (x >> 11) as f64 / (1_u64 << 53) as f64
+        });
+        let edge_values = [
+            0.0,
+            f64::from_bits(1),
+            f64::MIN_POSITIVE,
+            f64::from_bits(1.0_f64.to_bits() - 1),
+        ];
+        let near_ties = (0..1000).map(|i| (i as f64 + 0.5) / 1e13);
+        for value in random_values.chain(edge_values).chain(near_ties) {
+            let mut buf = [0_u8; 64];
+            let len =
+                unsafe { snprintf(buf.as_mut_ptr().cast(), buf.len(), c"%.13f".as_ptr(), value) }
+                    as usize;
+            let printed = std::str::from_utf8(&buf[..len]).unwrap();
+            let expected: f64 = printed.parse().unwrap();
+            assert_eq!(round13(value).to_bits(), expected.to_bits(), "{value:?}");
+        }
     }
 }
